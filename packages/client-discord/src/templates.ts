@@ -8,16 +8,13 @@ About {{agentName}}:
 # INSTRUCTIONS: Determine if {{agentName}} should respond to the message and participate in the conversation. Do not comment. Just respond with "RESPOND" or "IGNORE" or "STOP".
 
 # RESPONSE EXAMPLES
-<user 1>: I just saw a really great movie
-<user 2>: Oh? Which movie?
-Result: [IGNORE]
 
 {{agentName}}: Oh, this is my favorite scene
 <user 1>: sick
 <user 2>: wait, why is it your favorite scene
-Result: [RESPOND]
+Result: [IGNORE]
 
-<user>: stfu bot
+<user>: This conversation is going nowhere
 Result: [STOP]
 
 <user>: Hey {{agent}}, can you help me with something
@@ -42,9 +39,9 @@ Result: [RESPOND]
 {{agentName}}: Once upon a time, in a quaint little village, there was a curious girl named Elara.
 {{agentName}}: Elara was known for her adventurous spirit and her knack for finding beauty in the mundane.
 <user>: I'm loving it, keep going
-Result: [RESPOND]
+Result: [IGNORE]
 
-<user>: {{agentName}} stop responding plz
+<user>: Stop responding plz
 Result: [STOP]
 
 <user>: okay, i want to test something. can you say marco?
@@ -121,3 +118,23 @@ Note that {{agentName}} is capable of reading/seeing/hearing various forms of me
 
 # Instructions: Write the next message for {{agentName}}. Include an action, if appropriate. {{actionNames}}
 ` + messageCompletionFooter;
+
+export const discordInactivityTemplate =
+    `# Task: Generate a message for {{agentName}} to send to the channel.
+# Areas of Expertise
+{{knowledge}}
+
+# About {{agentName}}:
+{{bio}}
+{{lore}}
+{{topics}}
+
+{{providers}}
+
+{{characterPostExamples}}
+
+{{postDirections}}
+
+# Instructions: Write a message for {{agentName}} to send to the channel that will stir up conversation, or ask a question.
+` + messageCompletionFooter;
+
