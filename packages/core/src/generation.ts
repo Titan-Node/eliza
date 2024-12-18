@@ -1151,7 +1151,7 @@ export const generateImage = async (
                 prompt: data.prompt,
                 width: data.width || 1024,
                 height: data.height || 1024,
-                steps: data.numIterations || 20,
+                num_inference_steps: data.numIterations || 20,
             });
 
             if (!result || !result.data) {
