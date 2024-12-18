@@ -238,6 +238,7 @@ export enum ModelProviderName {
     HYPERBOLIC = "hyperbolic",
     VENICE = "venice",
     AKASH_CHAT_API = "akash_chat_api",
+    LIVEPEER = "livepeer",
 }
 
 /**

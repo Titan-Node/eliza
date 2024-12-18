@@ -36,6 +36,7 @@ import {
     ActionResponse,
 } from "./types.ts";
 import { fal } from "@fal-ai/client";
+import { Livepeer } from "@livepeer/ai";
 
 /**
  * Send a message to the model for a text generateText - receive a string back and parse how you'd like
@@ -955,6 +956,7 @@ export const generateImage = async (
               runtime.getSetting("TOGETHER_API_KEY") ??
               runtime.getSetting("FAL_API_KEY") ??
               runtime.getSetting("OPENAI_API_KEY") ??
+              runtime.getSetting("LIVEPEER_API_KEY") ??
               runtime.getSetting("VENICE_API_KEY"));
 
     try {
@@ -1139,6 +1141,25 @@ export const generateImage = async (
             });
 
             return { success: true, data: base64s };
+        } else if (runtime.imageModelProvider === ModelProviderName.LIVEPEER) {
+            const livepeer = new Livepeer({
+                httpBearer: apiKey as string,
+            });
+
+            const result = await livepeer.generate.textToImage({
+                model_id: runtime.getSetting("LIVEPEER_MODEL_ID") || "SG161222/RealVisXL_V4.0_Lightning",
+                prompt: data.prompt,
+                width: data.width || 1024,
+                height: data.height || 1024,
+                steps: data.numIterations || 20,
+            });
+
+            if (!result || !result.data) {
+                throw new Error("Failed to generate image with Livepeer");
+            }
+
+            // Assuming result.data contains the image URL or base64
+            return { success: true, data: [result.data] };
         } else {
             let targetSize = `${data.width}x${data.height}`;
             if (
