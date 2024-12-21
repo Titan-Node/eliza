@@ -85,6 +85,7 @@ const imageGeneration: Action = {
         const falApiKeyOk = !!runtime.getSetting("FAL_API_KEY");
         const openAiApiKeyOk = !!runtime.getSetting("OPENAI_API_KEY");
         const veniceApiKeyOk = !!runtime.getSetting("VENICE_API_KEY");
+        const livepeerApiKeyOk = !!runtime.getSetting("LIVEPEER_API_KEY");
 
         return (
             anthropicApiKeyOk ||
@@ -92,7 +93,8 @@ const imageGeneration: Action = {
             heuristApiKeyOk ||
             falApiKeyOk ||
             openAiApiKeyOk ||
-            veniceApiKeyOk
+            veniceApiKeyOk ||
+            livepeerApiKeyOk
         );
     },
     handler: async (

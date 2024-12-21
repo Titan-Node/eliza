@@ -531,7 +531,8 @@ export async function createAgent(
             getSecret(character, "FAL_API_KEY") ||
             getSecret(character, "OPENAI_API_KEY") ||
             getSecret(character, "VENICE_API_KEY") ||
-            getSecret(character, "HEURIST_API_KEY")
+            getSecret(character, "HEURIST_API_KEY") ||
+            getSecret(character, "LIVEPEER_API_KEY")
                 ? imageGenerationPlugin
                 : null,
             ...(getSecret(character, "COINBASE_API_KEY") &&
