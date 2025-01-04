@@ -27,6 +27,7 @@ import { VoiceManager } from "./voice.ts";
 import {
     discordShouldRespondTemplate,
     discordMessageHandlerTemplate,
+    discordInactivityTemplate,
 } from "./templates.ts";
 import {
     IGNORE_RESPONSE_WORDS,
@@ -65,6 +66,7 @@ export class MessageManager {
     private interestChannels: InterestChannels = {};
     private discordClient: any;
     private voiceManager: VoiceManager;
+    private inactivityTimers: Map<string, NodeJS.Timeout> = new Map();
 
     constructor(discordClient: any, voiceManager: VoiceManager) {
         this.client = discordClient.client;
@@ -115,6 +117,20 @@ export class MessageManager {
         const channelId = message.channel.id;
         const isDirectlyMentioned = this._isMessageForMe(message);
         const hasInterest = this._checkInterest(message.channelId);
+
+        // Reset the inactivity timer for the channel
+        if (this.inactivityTimers.has(channelId)) {
+            elizaLogger.debug(`Clearing existing inactivity timer for channel ${channelId}`);
+            clearTimeout(this.inactivityTimers.get(channelId));
+        }
+
+        // Set a new inactivity timer with random delay between 30-60 seconds
+        elizaLogger.debug(`Setting new inactivity timer for channel ${channelId}`);
+        const randomDelay = Math.floor(Math.random() * (60 - 30 + 1) + 30) * 1000;
+        this.inactivityTimers.set(channelId, setTimeout(() => {
+            elizaLogger.debug(`Inactivity timer expired for channel ${channelId}`);
+            this.sendInactivityMessage(message.channel as TextChannel);
+        }, randomDelay));
 
         // Team handling
         if (
@@ -378,6 +394,19 @@ export class MessageManager {
                 (shouldRespond && !hasInterest)
             ) {
                 shouldRespond = await this._shouldRespond(message, state);
+            }
+
+            // Add a random 15-20 second delay before processing message
+            const delayMs = Math.floor(Math.random() * (20000 - 15000 + 1) + 15000);
+            elizaLogger.debug(`Waiting ${delayMs/1000} seconds before processing message...`);
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+
+            if (!shouldIgnore) {
+                shouldIgnore = await this._shouldIgnore(message);
+            }
+
+            if (shouldIgnore) {
+                return;
             }
 
             if (shouldRespond) {
@@ -991,6 +1020,13 @@ export class MessageManager {
             return true;
         }
 
+        // Ignore if last 2 messages were from same user
+        const messages = await message.channel.messages.fetch({ limit: 2 });
+        if (messages.size === 2 &&
+            [...messages.values()][0].author.id === [...messages.values()][1].author.id) {
+            return true;
+        }
+
         const targetedPhrases = [
             this.runtime.character.name + " stop responding",
             this.runtime.character.name + " stop talking",
@@ -1335,4 +1371,70 @@ export class MessageManager {
             typing = false
         }
     }
+
+    private async _generateInactivityMessage(
+        state: State,
+        context: string
+    ): Promise<Content> {
+        const response = await generateMessageResponse({
+            runtime: this.runtime,
+            context,
+            modelClass: ModelClass.LARGE,
+        });
+
+        if (!response) {
+            console.error("No response from generateMessageResponse");
+            return;
+        }
+
+        return response;
+    }
+
+    private async sendInactivityMessage(channel: TextChannel) {
+        try {
+            elizaLogger.info(`Generating inactivity message for channel ${channel.id}`);
+
+            const roomId = stringToUuid(channel.id + "-" + this.runtime.agentId);
+            const topics = this.runtime.character.topics.join(", ");
+            const state = await this.runtime.composeState(
+                {
+                    userId: this.runtime.agentId,
+                    roomId: roomId,
+                    agentId: this.runtime.agentId,
+                    content: {
+                        text: topics,
+                        action: "",
+                    },
+                }
+            );
+
+            const context = composeContext({
+                state,
+                template: discordInactivityTemplate,
+            });
+
+            elizaLogger.debug("Generating inactivity message prompt:\n" + context);
+
+            const messageContent = await this._generateInactivityMessage(
+                state,
+                context
+            );
+
+            if (!messageContent || !messageContent.text) {
+                elizaLogger.error("No valid message content generated");
+                return;
+            }
+
+            const formattedMessage = messageContent.text.replaceAll(/\\n/g, "\n").trim();
+
+            elizaLogger.info(`Sending inactivity message to channel ${channel.id}`);
+            await channel.send(formattedMessage);
+            elizaLogger.info(`Successfully sent inactivity message to channel ${channel.id}`);
+
+        } catch (error) {
+            elizaLogger.error("Failed to send inactivity message:", error);
+        }
+    }
 }
+
+
