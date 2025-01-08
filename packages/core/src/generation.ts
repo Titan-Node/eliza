@@ -797,7 +797,7 @@ export async function generateText({
                 // Remove temperature since it's not in working curl
 
                 console.log("Livepeer request:", {
-                    url: endpoint,
+                    url: endpoint + "/llm",
                     body: requestBody
                 });
 
@@ -806,7 +806,7 @@ export async function generateText({
                     const controller = new AbortController();
                     const signal = controller.signal;
 
-                    const fetchResponse = await runtime.fetch(endpoint, {
+                    const fetchResponse = await runtime.fetch(endpoint+'/llm', {
                         method: "POST",
                         headers: {
                             "accept": "text/event-stream",
