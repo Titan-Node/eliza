@@ -419,14 +419,14 @@ export class MessageManager {
                 });
 
                 // simulate discord typing while generating a response
-                const stopTyping = this.simulateTyping(message)
+                const stopTyping = this.simulateTyping(message);
 
                 const responseContent = await this._generateResponse(
                     memory,
                     state,
                     context
                 ).finally(() => {
-                    stopTyping()
+                    stopTyping();
                 });
 
                 responseContent.text = responseContent.text?.trim();
@@ -1368,8 +1368,8 @@ export class MessageManager {
         typingLoop();
 
         return function stopTyping() {
-            typing = false
-        }
+            typing = false;
+        };
     }
 
     private async _generateInactivityMessage(
