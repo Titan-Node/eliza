@@ -777,9 +777,8 @@ export async function generateText({
                     throw new Error("Livepeer Gateway URL is not defined");
                 }
 
-                // Format the request body to exactly match the working curl command
                 const requestBody = {
-                    model: "meta-llama/Meta-Llama-3.1-8B-Instruct", // Hardcode the model name to match working curl
+                    model: model,
                     messages: [
                         {
                             role: "system",
@@ -790,66 +789,40 @@ export async function generateText({
                             content: context
                         }
                     ],
-                    max_tokens: max_response_length,
-                    stream: false // Keep stream false as in curl
+                    max_tokens: 128000,
+                    stream: false
                 };
 
-                // Remove temperature since it's not in working curl
-
-                console.log("Livepeer request:", {
-                    url: endpoint + "/llm",
-                    body: requestBody
+                const fetchResponse = await runtime.fetch(endpoint+'/llm', {
+                    method: "POST",
+                    headers: {
+                        "accept": "text/event-stream",
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer eliza-app-llm"
+                    },
+                    body: JSON.stringify(requestBody)
                 });
 
-                try {
-                    // Add -N and --no-buffer equivalent options
-                    const controller = new AbortController();
-                    const signal = controller.signal;
-
-                    const fetchResponse = await runtime.fetch(endpoint+'/llm', {
-                        method: "POST",
-                        headers: {
-                            "accept": "text/event-stream",
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify(requestBody),
-                        signal, // Add signal for no buffering
-                        keepalive: true // Similar to -N in curl
-                    });
-
-                    console.log("Livepeer response status:", fetchResponse.status, fetchResponse.statusText);
-
-                    if (!fetchResponse.ok) {
-                        const errorText = await fetchResponse.text();
-                        throw new Error(
-                            `Livepeer request failed (${fetchResponse.status}): ${errorText}`
-                        );
-                    }
-                    const json = await fetchResponse.json();
-                    console.log("Livepeer response:", json);
-
-                    if (
-                        !json ||
-                        !json.choices ||
-                        !json.choices[0] ||
-                        !json.choices[0].delta ||
-                        !json.choices[0].delta.content
-                    ) {
-                        throw new Error("Invalid response format from Livepeer");
-                    }
-
-                    // Just return the content as a string since generateText should return a string
-                    response = json.choices[0].delta.content;
-
-                    // Log the actual content to debug
-                    elizaLogger.debug("Livepeer response content:", response);
-                    elizaLogger.debug("Successfully received response from Livepeer model");
-                } catch (err) {
-                    elizaLogger.error("Error in Livepeer request:", err);
-                    throw err;
+                if (!fetchResponse.ok) {
+                    const errorText = await fetchResponse.text();
+                    throw new Error(`Livepeer request failed (${fetchResponse.status}): ${errorText}`);
                 }
 
+                const json = await fetchResponse.json();
+
+                if (!json?.choices?.[0]?.message?.content) {
+                    throw new Error("Invalid response format from Livepeer");
+                }
+
+                response = json.choices[0].message.content.replace(/<\|start_header_id\|>assistant<\|end_header_id\|>\n\n/, '');
+                elizaLogger.debug("Successfully received response from Livepeer model");
                 break;
+            }
+
+            default: {
+                const errorMessage = `Unsupported provider: ${provider}`;
+                elizaLogger.error(errorMessage);
+                throw new Error(errorMessage);
             }
         }
 
